@@ -1,15 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/object-tracker-demo/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + Vue</title>
-    <script type="module" crossorigin src="/object-tracker-demo/assets/index-579aa42f.js"></script>
-    <link rel="stylesheet" href="/object-tracker-demo/assets/index-c267f9a3.css">
-  </head>
-  <body>
-    <div id="app"></div>
-    
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="object-tracker-demo/" />
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <title>Object-Tracker</title>
+</head>
+
+<body>
+  <h1>Object-Tracker-Demo</h1>
+  <p>Click on the image to track something.</p>
+  <video autoplay="true" id="videoElement" webkit-playsinline="true" playsinline="true"></video>
+  <div id="container">
+    <canvas id="canvas"> </canvas>
+  </div>
+
+  <script type="module">
+    import init from './pkg/object_tracker.js';
+    import * as wasm from './pkg/object_tracker.js';
+
+    const run = async () => {
+      await init();
+
+      // greet("wasm");
+
+      const video = document.getElementById("videoElement");
+      const canvas = document.getElementById("canvas");
+      const canvasContext = canvas.getContext("2d");
+
+      const window_size = 128;
+
+      // const img = document.getElementById("img");
+
+      console.log(video);
+      // console.log(img);
+
+      async function updatePosition(event) {
+        let x = event.offsetX;
+        let y = event.offsetY;
+        console.log(x, y);
+
+        let base64 = canvas.toDataURL("image/png");
+        let blob = await (await fetch(base64)).blob();
+        let frame = new Uint8Array(await blob.arrayBuffer());
+
+        x = x - window_size / 2;
+        y = y - window_size / 2;
+
+        x = Math.max(x, 0);
+        x = Math.min(x, canvas.width);
+        y = Math.max(y, 0);
+        y = Math.min(y, canvas.height);
+
+        tracker = new wasm.Tracker(
+          video.videoWidth,
+          video.videoHeight,
+          JSON.stringify({
+            MOSSE: {
+              window_size: window_size,
+              learning_rate: 0.1,
+              psr_threshold: 7.0,
+              regularization: 1.0,
+              desperation_level: 1.0,
+            }
+          })
+        );
+
+        tracker.new_trace(x, y, window_size, window_size, frame);
+      }
+      canvas.onclick = updatePosition;
+      let tracker = null;
+
+      if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: false, video: true })
+          .then(function (stream) {
+            console.log(video, stream);
+            video.srcObject = stream;
+
+            video.play();
+          })
+          .catch(function (error) {
+            console.error("Something went wrong!", error);
+          });
+      }
+
+      (function loop() {
+        setTimeout(function () {
+          // Your logic here
+          processing();
+          loop();
+        }, 30);
+      })();
+
+      async function processing() {
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+        if (width && height) {
+          canvas.width = width;
+          canvas.height = height;
+
+          canvasContext.clearRect(0, 0, width, height);
+          canvasContext.drawImage(video, 0, 0, width, height);
+
+
+          if (tracker != null) {
+            let tracked_frame = tracker.track(
+              width,
+              height,
+              new Uint8Array(canvasContext.getImageData(0, 0, width, height).data.buffer)
+            );
+
+            let x = tracked_frame.x;
+            let y = tracked_frame.y;
+
+            x = x - window_size / 2;
+            y = y - window_size / 2;
+
+            canvasContext.beginPath();
+            canvasContext.lineWidth = "6";
+            canvasContext.strokeStyle = "red";
+            canvasContext.rect(x, y, window_size, window_size);
+            canvasContext.fillStyle = "Green";
+            canvasContext.font = "20px Arial";
+            canvasContext.fillText("psr:" + tracked_frame.psr, x, y - 10);
+            canvasContext.stroke();
+            canvasContext.closePath();
+          }
+        }
+      }
+    }
+
+    run();
+  </script>
+</body>
+
+<style>
+  #container {
+    margin: 0px auto;
+    border: 10px #333 solid;
+    display: flex;
+    justify-content: center;
+  }
+
+  #videoElement {
+    visibility: hidden;
+    width: 1px;
+    height: 1px;
+    background-color: #666;
+  }
+
+  body {
+    text-align: center;
+  }
+</style>
+
 </html>
