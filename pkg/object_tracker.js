@@ -117,6 +117,13 @@ export function get_memory() {
     return takeObject(ret);
 }
 
+function _assertClass(instance, klass) {
+    if (!(instance instanceof klass)) {
+        throw new Error(`expected instance of ${klass.name}`);
+    }
+    return instance.ptr;
+}
+
 function passArray8ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 1, 1) >>> 0;
     getUint8Memory0().set(arg, ptr / 1);
@@ -188,6 +195,92 @@ export class Prediction {
 }
 /**
 */
+export class TargetBox {
+
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(TargetBox.prototype);
+        obj.__wbg_ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_targetbox_free(ptr);
+    }
+    /**
+    * @returns {number}
+    */
+    get x() {
+        const ret = wasm.__wbg_get_prediction_x(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @param {number} arg0
+    */
+    set x(arg0) {
+        wasm.__wbg_set_prediction_x(this.__wbg_ptr, arg0);
+    }
+    /**
+    * @returns {number}
+    */
+    get y() {
+        const ret = wasm.__wbg_get_prediction_y(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @param {number} arg0
+    */
+    set y(arg0) {
+        wasm.__wbg_set_prediction_y(this.__wbg_ptr, arg0);
+    }
+    /**
+    * @returns {number}
+    */
+    get width() {
+        const ret = wasm.__wbg_get_targetbox_width(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @param {number} arg0
+    */
+    set width(arg0) {
+        wasm.__wbg_set_targetbox_width(this.__wbg_ptr, arg0);
+    }
+    /**
+    * @returns {number}
+    */
+    get height() {
+        const ret = wasm.__wbg_get_targetbox_height(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+    * @param {number} arg0
+    */
+    set height(arg0) {
+        wasm.__wbg_set_targetbox_height(this.__wbg_ptr, arg0);
+    }
+    /**
+    * @param {number} x
+    * @param {number} y
+    * @param {number} width
+    * @param {number} height
+    */
+    constructor(x, y, width, height) {
+        const ret = wasm.targetbox_new(x, y, width, height);
+        return TargetBox.__wrap(ret);
+    }
+}
+/**
+*/
 export class Tracker {
 
     static __wrap(ptr) {
@@ -221,17 +314,18 @@ export class Tracker {
         return Tracker.__wrap(ret);
     }
     /**
-    * @param {number} x
-    * @param {number} y
-    * @param {number} width
-    * @param {number} height
+    * @param {TargetBox} tar_box
+    * @param {number} frame_width
+    * @param {number} frame_height
     * @param {Uint8Array} frame
     * @returns {boolean}
     */
-    new_trace(x, y, width, height, frame) {
-        const ptr0 = passArray8ToWasm0(frame, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.tracker_new_trace(this.__wbg_ptr, x, y, width, height, ptr0, len0);
+    new_trace(tar_box, frame_width, frame_height, frame) {
+        _assertClass(tar_box, TargetBox);
+        var ptr0 = tar_box.__destroy_into_raw();
+        const ptr1 = passArray8ToWasm0(frame, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.tracker_new_trace(this.__wbg_ptr, ptr0, frame_width, frame_height, ptr1, len1);
         return ret !== 0;
     }
     /**
