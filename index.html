@@ -36,25 +36,24 @@
       // console.log(img);
 
       async function updatePosition(event) {
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
         let x = event.offsetX;
         let y = event.offsetY;
         console.log(x, y);
-
-        let base64 = canvas.toDataURL("image/png");
-        let blob = await (await fetch(base64)).blob();
-        let frame = new Uint8Array(await blob.arrayBuffer());
 
         x = x - window_size / 2;
         y = y - window_size / 2;
 
         x = Math.max(x, 0);
-        x = Math.min(x, canvas.width);
+        x = Math.min(x, width);
         y = Math.max(y, 0);
-        y = Math.min(y, canvas.height);
+        y = Math.min(y, height);
 
         tracker = new wasm.Tracker(
-          video.videoWidth,
-          video.videoHeight,
+          width,
+          height,
           JSON.stringify({
             MOSSE: {
               window_size: window_size,
@@ -66,7 +65,16 @@
           })
         );
 
-        tracker.new_trace(x, y, window_size, window_size, frame);
+        // clear tracking box
+        canvasContext.clearRect(0, 0, width, height);
+        canvasContext.drawImage(video, 0, 0, width, height);
+
+        tracker.new_trace(
+          new wasm.TargetBox(x, y, window_size, window_size),
+          width,
+          height,
+          new Uint8Array(canvasContext.getImageData(0, 0, width, height).data.buffer)
+        );
       }
       canvas.onclick = updatePosition;
       let tracker = null;
